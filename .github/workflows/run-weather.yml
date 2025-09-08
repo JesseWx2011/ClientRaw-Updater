@@ -1,44 +1,35 @@
-- name: Push clientraw.txt
-  run: |
-    git config --global user.name "github-actions"
-    git config --global user.email "github-actions@users.noreply.github.com"
-    git add clientraw.txt
-    git commit -m "Update clientraw.txt via GitHub Actions" || echo "No changes to commit"
-    git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/JesseWx2011/ClientRaw-Updater.git HEAD:master
+name: Update ClientRaw
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"  # Runs every 10 minutes; adjust as needed
+  workflow_dispatch:       # Allows manual trigger
 
 jobs:
-  run-script:
+  update-clientraw:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12.5'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12.5
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests pytz
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pytz
 
-    - name: Run Python script
-      run: python client.py
+      - name: Run client.py
+        run: python client.py
 
-    - name: Save clientraw.txt to repository
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@users.noreply.github.com"
-        git add clientraw.txt
-        git commit -m "Update clientraw.txt via GitHub Actions" || echo "No changes to commit"
-        git push origin master
-
-
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@users.noreply.github.com"
+          git add clientraw.txt
+          git commit -m "Update clientraw.txt via GitHub Actions" || echo "No changes to commit"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:master
