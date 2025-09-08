@@ -48,7 +48,7 @@ humidity_out = aw.get('humidity', -100)
 windspeed = mph_to_kts(aw.get('windspeedmph', -100))
 windgust = mph_to_kts(aw.get('windgustmph', -100))
 winddir = aw.get('winddir', -100)
-baro = hpa_to_inhg(aw.get('baromabsin', -100))  # Convert hPa to inHg
+baro_hpa = round(aw.get('baromabsin', -100) * 33.8639, 1) if aw.get('baromabsin') is not None else -100
 rain_day = inch_to_mm(aw.get('dailyrainin', 0))
 rain_month = inch_to_mm(aw.get('monthlyrainin', 0))
 rain_year = inch_to_mm(aw.get('yearlyrainin', 0))
@@ -118,7 +118,7 @@ fields.append(round(windspeed, 1)) # Current wind
 fields.append(winddir)              # Wind direction
 fields.append(round(temp_out, 1))   # Temperature
 fields.append(humidity_out)         # Humidity
-fields.append(baro*33.8639)
+fields.append(baro_hpa)
 
 # 7–9: rain
 fields.append(rain_day)
