@@ -33,4 +33,5 @@ jobs:
         git config --global user.email "github-actions@users.noreply.github.com"
         git add clientraw.txt
         git commit -m "Update clientraw.txt via GitHub Actions" || echo "No changes to commit"
-        git push origin main
+        git push origin master
+
