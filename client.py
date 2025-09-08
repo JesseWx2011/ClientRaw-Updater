@@ -94,6 +94,13 @@ if obs_w:
 else:
     max_temp = min_temp = max_gust_today = -100
 
+# Max hourly precip rate (mm) for fields 37 & 38
+max_precip_in = max(
+    safe_get(obs, 'imperial', 'precipRate', default=0)
+    for obs in obs_w
+) if obs_w else 0
+max_precip_mm = inch_to_mm(max_precip_in)
+
 # Average wind direction
 avg_wind_dir = round(sum([d for d in last_hour_dirs if d > 0]) / len([d for d in last_hour_dirs if d > 0])) if any(last_hour_dirs) else winddir
 
@@ -129,7 +136,7 @@ fields.append(rain_year)
 while len(fields) < 32:
     fields.append(-100)
 
-# 32: station + timestamp (formatted exactly like your example)
+# 32: station + timestamp
 fields.append(f"{station_name_raw.lower().replace(' ', '')},fl-{now_local.strftime('%I:%M:%S_%p')}")
 
 # 33–45: placeholders and lightning info
@@ -142,6 +149,10 @@ fields.extend(last_hour_speeds)
 
 # 56–65: last hour wind directions
 fields.extend(last_hour_dirs)
+
+# 66–67: max hourly precip rate mm (fields 37 & 38)
+fields.append(max_precip_mm)
+fields.append(max_precip_mm)
 
 # Max gust today, dewpoint, cloud base
 fields.append(max_gust_today)
