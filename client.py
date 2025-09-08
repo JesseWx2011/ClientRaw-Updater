@@ -118,7 +118,7 @@ fields.append(round(windspeed, 1)) # Current wind
 fields.append(winddir)              # Wind direction
 fields.append(round(temp_out, 1))   # Temperature
 fields.append(humidity_out)         # Humidity
-fields.append(baro)                 # Barometer in inHg
+fields.append(baro*33.8639)
 
 # 7–9: rain
 fields.append(rain_day)
@@ -130,7 +130,7 @@ while len(fields) < 32:
     fields.append(-100)
 
 # 32: station + timestamp (formatted exactly like your example)
-fields.append(f"{station_name_raw.lower()},fl-{now_local.strftime('%I:%M:%S_%p')}")
+fields.append(f"{station_name_raw.lower().replace(' ', '')},fl-{now_local.strftime('%I:%M:%S_%p')}")
 
 # 33–45: placeholders and lightning info
 fields.extend([-100]*3)
