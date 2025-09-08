@@ -1,0 +1,36 @@
+name: Run Weather Script
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12.5'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pytz
+
+    - name: Run Python script
+      run: python client.py
+
+    - name: Save clientraw.txt to repository
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@users.noreply.github.com"
+        git add clientraw.txt
+        git commit -m "Update clientraw.txt via GitHub Actions" || echo "No changes to commit"
+        git push origin main
