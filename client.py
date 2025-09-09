@@ -23,9 +23,6 @@ def mph_to_kts(mph):
 def inch_to_mm(inches):
     return round(inches * 25.4, 1) if inches is not None else 0
 
-def hpa_to_inhg(hpa):
-    return round(hpa * 0.02953, 2) if hpa != -100 else -100
-
 def safe_get(d, *keys, default=-100):
     for key in keys:
         if d is None or key not in d:
@@ -81,25 +78,25 @@ for obs in reversed(obs_w):
             last_hour_temp.append(f_to_c(safe_get(obs, 'imperial', 'temp', default=0)))
             last_hour_rain.append(inch_to_mm(safe_get(obs, 'imperial', 'precipRate', default=0)))
 
-# Pad arrays to length 10
-for arr in [last_hour_speeds, last_hour_dirs, last_hour_temp, last_hour_rain]:
+# --- Force exactly 10 values for each array ---
+def fix_array(arr):
+    arr = arr[-10:]  # trim to last 10
     while len(arr) < 10:
-        arr.insert(0, 0)
+        arr.append(-100)  # pad with -100
+    return arr
 
-# Max/min temps
+last_hour_speeds = fix_array(last_hour_speeds)
+last_hour_dirs = fix_array(last_hour_dirs)
+last_hour_temp = fix_array(last_hour_temp)
+last_hour_rain = fix_array(last_hour_rain)
+
+# Max/min temps and max gust
 if obs_w:
     max_temp = max(f_to_c(safe_get(obs, 'imperial', 'tempHigh', default=-100)) for obs in obs_w)
     min_temp = min(f_to_c(safe_get(obs, 'imperial', 'tempLow', default=-100)) for obs in obs_w)
     max_gust_today = max(mph_to_kts(safe_get(obs, 'imperial', 'windgustHigh', default=-100)) for obs in obs_w)
 else:
     max_temp = min_temp = max_gust_today = -100
-
-# Max hourly precip rate (mm) for fields 37 & 38
-max_precip_in = max(
-    safe_get(obs, 'imperial', 'precipRate', default=0)
-    for obs in obs_w
-) if obs_w else 0
-max_precip_mm = inch_to_mm(max_precip_in)
 
 # Average wind direction
 avg_wind_dir = round(sum([d for d in last_hour_dirs if d > 0]) / len([d for d in last_hour_dirs if d > 0])) if any(last_hour_dirs) else winddir
@@ -114,6 +111,15 @@ condition_text = safe_get(nws, 'textDescription', default='Unknown')
 cloud_base = safe_get(nws, 'cloudLayers', 0, 'base', default=-100) if nws.get('cloudLayers') else -100
 
 # ----------------------------
+# Rain rate fields
+# ----------------------------
+rain_rate_in = aw.get('hourlyrainin', 0)  # inches per hour
+rain_rate_mm_min = round((rain_rate_in * 25.4) / 60, 2)
+
+max_rain_rate_in_hr = max((safe_get(obs, 'imperial', 'precipRate', default=0)) for obs in obs_w) if obs_w else 0
+max_rain_rate_mm_min = round((max_rain_rate_in_hr * 25.4) / 60, 2)
+
+# ----------------------------
 # BUILD CLIENTRAW LINE
 # ----------------------------
 fields = []
@@ -122,27 +128,38 @@ fields = []
 fields.append(12345)               # ID code
 fields.append(round(windspeed, 1)) # Avg wind
 fields.append(round(windspeed, 1)) # Current wind
-fields.append(winddir)              # Wind direction
-fields.append(round(temp_out, 1))   # Temperature
-fields.append(humidity_out)         # Humidity
-fields.append(baro_hpa)
+fields.append(winddir)             # Wind direction
+fields.append(round(temp_out, 1))  # Temperature
+fields.append(humidity_out)        # Humidity
+fields.append(baro_hpa)            # Pressure
 
-# 7–9: rain
+# 7–9 rain totals
 fields.append(rain_day)
 fields.append(rain_month)
 fields.append(rain_year)
 
-# 10–31: placeholders
+# 10–11 rain rates
+fields.append(rain_rate_mm_min)
+fields.append(max_rain_rate_mm_min)
+
+# 12–31 placeholders
 while len(fields) < 32:
     fields.append(-100)
 
 # 32: station + timestamp
 fields.append(f"{station_name_raw.lower().replace(' ', '')},fl-{now_local.strftime('%I:%M:%S_%p')}")
 
-# 33–45: placeholders and lightning info
-fields.extend([-100]*3)
+# 33–34 lightning/solar
 fields.append(lightning_day)
-fields.extend([-100]*8)
+fields.append(-100)
+
+# 35–36 day/month
+fields.append(now_local.day)
+fields.append(now_local.month)
+
+# 37–45 placeholders
+while len(fields) < 46:
+    fields.append(-100)
 
 # 46–55: last hour wind speeds
 fields.extend(last_hour_speeds)
@@ -150,17 +167,13 @@ fields.extend(last_hour_speeds)
 # 56–65: last hour wind directions
 fields.extend(last_hour_dirs)
 
-# 66–67: max hourly precip rate mm (fields 37 & 38)
-fields.append(max_precip_mm)
-fields.append(max_precip_mm)
-
 # Max gust today, dewpoint, cloud base
 fields.append(max_gust_today)
 fields.append(dewpoint)
 fields.append(cloud_base)
 
-# Fill remaining positions to 180
-while len(fields) < 180:
+# Pad to exactly 178 fields
+while len(fields) < 178:
     fields.append(-100)
 
 # ----------------------------
